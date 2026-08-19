@@ -268,10 +268,14 @@ LANGUAGE sql STABLE AS $$
                  - COALESCE(SUM(el.debit_amount), 0), 0)
     FROM personal_accounts pa
     JOIN chart_of_accounts coa ON coa.account_number = pa.coa_number
-    LEFT JOIN entry_lines      el ON el.account_id = pa.account_id
-    LEFT JOIN journal_entries  je ON je.entry_id = el.entry_id
-                                 AND je.status = 'posted'
-                                 AND je.entry_date <= as_of
+    LEFT JOIN (
+        SELECT el.*
+        FROM entry_lines el
+        JOIN journal_entries je
+          ON je.entry_id = el.entry_id
+         AND je.status = 'posted'
+         AND je.entry_date <= as_of
+    ) el ON el.account_id = pa.account_id
     GROUP BY pa.account_number, pa.currency,
              coa.account_name, coa.account_type
 $$;

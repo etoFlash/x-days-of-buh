@@ -94,33 +94,45 @@ def run_demo() -> None:
 
         # 2) Конверсия: Иванова покупает 1 000 USD за рубли.
         #    Банк продаёт валюту по курсу сделки 92.50, учётный курс — 92.40.
-        #    Дт 40817 — Кт 47423 по курсу сделки (92 500),
+        #    Дт 40817(RUB) — Кт 47423 по курсу сделки (92 500),
         #    Дт 47423 — Кт 40820(USD) по учётному курсу (92 400),
         #    разница 100 — доход банка на счёте 70613.
+        #    Техсчёт 47423 по сделке смыкается в ноль: 92 500 по Дт и по Кт.
         with conn.transaction():
             post_entry(
                 conn, OPERATING_DAY,
-                "Продажа 1 000 USD Ивановой из кассы: курс сделки 92.50, учётный 92.40",
+                "Рублёвое покрытие покупки 1 000 USD Ивановой (курс сделки 92.50)",
                 [
                     EntryLine(acc.IVANOVA_RUB, USD_DEAL_VALUE, "debit"),
                     EntryLine(acc.FX_CONVERSION, USD_DEAL_VALUE, "credit"),
+                ],
+                doc_type="fx_deal", external_ref="FX-0001",
+            )
+            post_entry(
+                conn, OPERATING_DAY,
+                "Зачисление 1 000 USD Ивановой по учётному курсу 92.40",
+                [
                     EntryLine(acc.FX_CONVERSION, USD_BOOK_VALUE, "debit"),
                     EntryLine(acc.IVANOVA_USD, USD_BOOK_VALUE, "credit",
-                              amount_currency=USD_AMOUNT),
-                    EntryLine(acc.FX_CONVERSION, USD_DEAL_DIFF, "debit"),
-                    EntryLine(acc.FX_INCOME, USD_DEAL_DIFF, "credit"),
-                    EntryLine(acc.FX_CONVERSION, USD_BOOK_VALUE, "debit"),
-                    EntryLine(acc.CASH_USD, USD_BOOK_VALUE, "credit",
                               amount_currency=USD_AMOUNT),
                 ],
                 doc_type="fx_deal", external_ref="FX-0001",
             )
-            print("2) Конверсия: Дт 40817(RUB) 92 500 — Кт 47423; "
-                  "Дт 47423 — Кт 40820(USD) 92 400; "
-                  "Дт 47423 — Кт 20206(USD) 92 400 (выдача из кассы); "
-                  "Дт 47423 — Кт 70613 100.00 (курсовая разница).\n"
-                  "   Примечание: счёт 47423 по этой сделке сомкнулся в ноль "
-                  "(92 500 по Дт и по Кт) — так и должно быть у техсчёта.")
+            post_entry(
+                conn, OPERATING_DAY,
+                "Курсовая разница по сделке FX-0001: (92.50 - 92.40) x 1 000",
+                [
+                    EntryLine(acc.FX_CONVERSION, USD_DEAL_DIFF, "debit"),
+                    EntryLine(acc.FX_INCOME, USD_DEAL_DIFF, "credit"),
+                ],
+                doc_type="fx_deal", external_ref="FX-0001",
+            )
+            print("2) Конверсия (3 документа, одна сделка FX-0001):\n"
+                  "   Дт 40817(RUB) 92 500 — Кт 47423 (покрытие)\n"
+                  "   Дт 47423 — Кт 40820(USD) 92 400 (зачисление по учётному курсу)\n"
+                  "   Дт 47423 — Кт 70613 100.00 (курсовая разница)\n"
+                  "   Примечание: техсчёт 47423 по сделке сомкнулся в ноль "
+                  "— так и должно быть.")
 
         # 3) Перевод клиент–клиент: пассив перед одним клиентом становится
         #    пассивом перед другим. Активы банка не меняются.
