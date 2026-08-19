@@ -90,7 +90,7 @@ flowchart LR
     D --> F[ОСВ / баланс / ОПУ<br/>модули 08–10]
 ```
 
-## Инварианты (гарантиирует PostgreSQL, не Python)
+## Инварианты (гарантирует PostgreSQL, не Python)
 
 1. **Двойная запись.** Констрейнт-триггер `check_entry_balance` на
    `entry_lines` (DEFERRABLE INITIALLY DEFERRED) на COMMIT проверяет:

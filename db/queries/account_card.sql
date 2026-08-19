@@ -50,6 +50,7 @@ lines AS (
     WHERE entry_date >= :'date_from'::date
 ),
 opening AS (
+    -- Одна строка: входящее сальдо по всем движениям ДО начала периода.
     SELECT
         NULL::date AS entry_date,
         '-'::text  AS ref,
@@ -60,7 +61,6 @@ opening AS (
         SUM(COALESCE(s.debit_amount, 0) - COALESCE(s.credit_amount, 0)) AS running_signed
     FROM scope s
     WHERE s.entry_date < :'date_from'::date
-    GROUP BY s.entry_date
 )
 SELECT
     entry_date,

@@ -82,7 +82,7 @@ def close_operating_day(conn: psycopg.Connection, day: date, closed_by: str = "p
             raise LedgerError(f"Операционный день {day} не найден или уже закрыт")
 
 
-def _account_exists(cur: psycopg.Cursor, account_number: str) -> None:
+def _assert_account_exists(cur: psycopg.Cursor, account_number: str) -> None:
     cur.execute(
         "SELECT 1 FROM personal_accounts WHERE account_number = %s",
         (account_number,),
@@ -107,8 +107,8 @@ def post_entry(
     if len(lines) < 2:
         raise LedgerError("Проводка должна содержать минимум две строки (Дт и Кт)")
 
-    total_debit = sum(l.amount for l in lines if l.side == "debit")
-    total_credit = sum(l.amount for l in lines if l.side == "credit")
+    total_debit = sum((l.amount for l in lines if l.side == "debit"), Decimal(0))
+    total_credit = sum((l.amount for l in lines if l.side == "credit"), Decimal(0))
     if total_debit != total_credit:
         raise LedgerError(
             f"Документ не сбалансирован: Дт {total_debit} != Кт {total_credit}"
@@ -116,7 +116,7 @@ def post_entry(
 
     with conn.cursor() as cur:
         for line in lines:
-            _account_exists(cur, line.account)
+            _assert_account_exists(cur, line.account)
 
         cur.execute(
             """
